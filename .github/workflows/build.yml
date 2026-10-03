@@ -1,4 +1,4 @@
-name: Build EcoChat Beta APK
+name: Build EcoChat Final APK
 
 on:
   push:
@@ -17,20 +17,21 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Build Android APK
+    - name: Setup Android Project Directory
       run: |
-        # ለሙከራ እንዲሆን ኮዶቹን ወደ አንድሮይድ ፕሮጀክት መዋቅር በጊዜያዊነት ማደራጀት
+        # ሁሉንም ፋይሎች በትክክለኛው የአንድሮይድ መዋቅር ማደራጀት
         mkdir -p app/src/main/java/app/ecochat/beta
         mkdir -p app/src/main/res/layout
-        mv MainActivity.java app/src/main/java/app/ecochat/beta/
-        mv AndroidManifest.xml app/src/main/
-        mv activity_main.xml app/src/main/res/layout/
         
-        # የመሰብሰቢያ ቅንብር ፋይል በቦታው መፍጠር
-        echo "plugins { id 'com.android.application' version '8.1.0' }" > settings.gradle
-        echo "rootProject.name = 'EcoChat'" >> settings.gradle
+        [ -f MainActivity.java ] && cp MainActivity.java app/src/main/java/app/ecochat/beta/
+        [ -f AndroidManifest.xml ] && cp AndroidManifest.xml app/src/main/
+        [ -f activity_main.xml ] && cp activity_main.xml app/src/main/res/layout/
         
-        # የባንክና የብሉቱዝ ስራዎችን ለማገናኘት የጥገኝነት መዋቅር መገንባት
+        # በዋናው ገፅ ላይ የፈጠርናቸውን ግራድል ፋይሎች ወደ አፑ ማውጫ ማዛወር
+        [ -f settings.gradle ] && cp settings.gradle .
+        [ -f build.gradle ] && cp build.gradle .
+        
+        # ለአፑ መገንቢያ የሚሆን ንዑስ ግራድል ፋይል መፍጠር
         cat << 'EOF' > app/build.gradle
         plugins {
             id 'com.android.application'
@@ -50,17 +51,15 @@ jobs:
             implementation 'androidx.appcompat:appcompat:1.6.1'
         }
         EOF
-        
-        # መተግበሪያውን ከ100MB በታች አድርጎ ማመንጨት
-        chmod +x gradlew || true
-        ./gradlew assembleDebug || true
-        
-        # ጓደኞችህ በቀላሉ እንዲያወርዱት ፋይሉን ማዘጋጀት
-        mkdir -p output
-        echo "EcoChat Beta Build Complete" > output/EcoChat_Beta_v1.0.apk
-        
-    - name: Upload APK Artifact
+
+    - name: Generate Gradle Wrapper and Build APK
+      run: |
+        gradle wrapper --gradle-version 8.1.1
+        chmod +x gradlew
+        ./gradlew assembleDebug
+
+    - name: Upload Real Functional APK
       uses: actions/upload-artifact@v4
       with:
         name: EcoChat-Beta-APK
-        path: output/EcoChat_Beta_v1.0.apk
+        path: app/build/outputs/apk/debug/app-debug.apk
